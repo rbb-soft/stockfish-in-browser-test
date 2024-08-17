@@ -8,17 +8,18 @@
 <body>
   <h1>Stockfish with Service Worker</h1>
   <button id="start-analysis">Start Analysis</button>
+  <pre id="output"></pre>
   <pre id="output1"></pre>
-  <pre id="output2"></pre>
-  <pre id="output3"></pre>
-  <pre id="best"></pre>
+  
+  <pre id="score"></pre>
 
   <script src="main.js"></script>
   <script>
     const stockfish = new Worker('stockfish-nnue-16.js');
-    const output = document.getElementById('output1');
+    const score = document.getElementById('score');
 	
-	const best = document.getElementById('best');
+	const output = document.getElementById('output');
+	const output1 = document.getElementById('output1');
 
     document.getElementById('start-analysis').addEventListener('click', () => {
       stockfish.postMessage('uci'); 
@@ -27,12 +28,27 @@
 
 
       stockfish.onmessage = function(event) {
-		output.textContent += event.data + '\n';
-		
-      };
+			let message = event.data;
+			output.textContent = message  + "\n";
 
-      stockfish.postMessage('position startpos');
-      stockfish.postMessage('go depth 20');
+			if (message.includes("info depth")) {
+				let mateMatch = message.match(/score mate (-?\d+)/);
+				if (mateMatch) {
+					output1.textContent = "Mate in " + mateMatch[1] + " moves";
+					score.textContent = (mateMatch[1] > 0) ? "Mate in " + mateMatch[1] : "Mate in " + Math.abs(mateMatch[1]);
+				} else {
+					let match = message.match(/score cp (-?\d+)/);
+					if (match) {
+						let evaluation = parseInt(match[1], 10) / 100;
+						score.textContent = evaluation;
+					}
+				}
+			}
+		};
+
+
+      stockfish.postMessage('position fen r6k/6p1/2p4p/1p6/p2P4/2P1Q3/PP4P1/R4RK1 b - - 0 30');
+      stockfish.postMessage('go depth 65');
     });
   </script>
 </body>
