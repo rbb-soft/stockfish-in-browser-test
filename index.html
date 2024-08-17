@@ -10,45 +10,57 @@
   <button id="start-analysis">Start Analysis</button>
   <pre id="output"></pre>
   <pre id="output1"></pre>
-  
   <pre id="score"></pre>
+  <pre id="depth"></pre>  <!-- Pre para mostrar la profundidad -->
+  <pre id="pv"></pre>     <!-- Pre para mostrar el árbol de variantes -->
 
   <script src="main.js"></script>
   <script>
     const stockfish = new Worker('stockfish-nnue-16.js');
     const score = document.getElementById('score');
-	
-	const output = document.getElementById('output');
-	const output1 = document.getElementById('output1');
+    const output = document.getElementById('output');
+    const output1 = document.getElementById('output1');
+    const depthElement = document.getElementById('depth');
+    const pvElement = document.getElementById('pv');
 
     document.getElementById('start-analysis').addEventListener('click', () => {
       stockfish.postMessage('uci'); 
-	  stockfish.postMessage('setoption name Use NNUE value true');
-	  //stockfish.postMessage('setoption name MultiPV value 3');
-
+      stockfish.postMessage('setoption name Use NNUE value true');
 
       stockfish.onmessage = function(event) {
-			let message = event.data;
-			output.textContent = message  + "\n";
+        let message = event.data;
+        output.textContent = message + "\n";
 
-			if (message.includes("info depth")) {
-				let mateMatch = message.match(/score mate (-?\d+)/);
-				if (mateMatch) {
-					output1.textContent = "Mate in " + mateMatch[1] + " moves";
-					score.textContent = (mateMatch[1] > 0) ? "Mate in " + mateMatch[1] : "Mate in " + Math.abs(mateMatch[1]);
-				} else {
-					let match = message.match(/score cp (-?\d+)/);
-					if (match) {
-						let evaluation = parseInt(match[1], 10) / 100;
-						score.textContent = evaluation;
-					}
-				}
-			}
-		};
+        if (message.includes("info depth")) {
+          // Extraer y mostrar la profundidad
+          let depthMatch = message.match(/depth (\d+)/);
+          if (depthMatch) {
+            depthElement.textContent = "Depth: " + depthMatch[1];
+          }
 
+          // Extraer y mostrar el árbol de variantes (PV: Principal Variation)
+          let pvMatch = message.match(/pv (.+)/);
+          if (pvMatch) {
+            pvElement.textContent = "PV: " + pvMatch[1];
+          }
 
-      stockfish.postMessage('position fen r6k/6p1/2p4p/1p6/p2P4/2P1Q3/PP4P1/R4RK1 b - - 0 30');
-      stockfish.postMessage('go depth 65');
+          // Extraer y mostrar la evaluación o el mate
+          let mateMatch = message.match(/score mate (-?\d+)/);
+          if (mateMatch) {
+            output1.textContent = "Mate in " + mateMatch[1] + " moves";
+            score.textContent = (mateMatch[1] > 0) ? "Mate in " + mateMatch[1] : "Mate in " + Math.abs(mateMatch[1]);
+          } else {
+            let match = message.match(/score cp (-?\d+)/);
+            if (match) {
+              let evaluation = parseInt(match[1], 10) / 100;
+              score.textContent = evaluation;
+            }
+          }
+        }
+      };
+
+      stockfish.postMessage('position fen r6k/6p1/2p4p/1p6/p2P4/2P3qQ/PP4P1/R4RK1 b - - 0 29');
+      stockfish.postMessage('go depth 40');
     });
   </script>
 </body>
